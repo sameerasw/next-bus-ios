@@ -9,28 +9,44 @@ import SwiftUI
 
 struct LocationSearchView: View {
     @Binding var searchText: String
+    @Environment(\.dismiss) private var dismiss
+
+    // The list of available cities
+    let cities = [
+        "Colombo", "Rathnapura", "Badulla", "Kandy",
+        "Gampaha", "Matara", "Nuwara Eliya", "Polonnaruwa",
+        "Ella", "Panadura"
+    ]
+
+    // Filtered cities based on search text
+    var filteredCities: [String] {
+        if searchText.isEmpty {
+            return cities
+        } else {
+            return cities.filter { $0.localizedCaseInsensitiveContains(searchText) }
+        }
+    }
 
     var body: some View {
         NavigationStack {
-            ScrollView{
-                List {
-                    Text("Colombo")
-                    Text("Rathnapura")
-                    Text("Badulla")
-                    Text("Kandy")
-                    Text("Gampaha")
-                    Text("Matara")
-                    Text("Nuwara Eliya")
-                    Text("Polonnaruwa")
-                    Text("Ella")
-                    Text("Panadura")
+            List(filteredCities, id: \.self) { city in
+                Button(action: {
+                    // When a city is tapped, set the binding and dismiss
+                    searchText = city
+                    dismiss()
+                }) {
+                    Text(city)
                 }
             }
         }
-        .searchable(text: $searchText)
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "Pick a route"
+        )
     }
 }
 
 #Preview {
-    LocationSearchView(searchText: .constant("Search"))
+    LocationSearchView(searchText: .constant(""))
 }
