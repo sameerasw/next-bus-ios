@@ -9,7 +9,7 @@ import SwiftUI
 import MapKit
 import CoreLocation
 
-struct newScheduleView: View {
+struct NewScheduleView: View {
     @State private var date = Date()
     @State private var pickup: String = ""
     @State private var route: String = ""
@@ -24,25 +24,9 @@ struct newScheduleView: View {
     let pickups = ["Colombo", "Kandy", "Galle", "Jaffna", "Anuradhapura", "Negombo", "Batticaloa"]
 
     var body: some View {
-        NavigationStack{
-            ScrollView(){
-                VStack(spacing: 25){
-
-                    //            VStack {
-                    //                if let location = locationManager.lastKnownLocation {
-                    //                    Text("Latitude: \(location.latitude)")
-                    //                    Text("Longitude: \(location.longitude)")
-                    //                } else {
-                    //                    Text("Getting location...")
-                    //                }
-                    //
-                    //                Button("Request Location") {
-                    //                    locationManager.requestLocationAuthorization()
-                    //                }
-                    //            }
-                    //            .onAppear {
-                    //                locationManager.requestLocationAuthorization()
-                    //            }
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 25) {
 
                     DatePicker(
                         "Time",
@@ -52,13 +36,33 @@ struct newScheduleView: View {
                     .padding(.horizontal, 16)
 
                     GroupBox(label:
-                                Label("From", systemImage: "location")
-                    ){
-                        ZStack(alignment: .bottomTrailing){
-
+                                HStack{
+                        Label("From", systemImage: "location")
+                        Spacer()
+                    }
+                    ) {
+                        VStack(alignment: .leading) {
+                            if let address = locationManager.currentAddress {
+                                Text(address)
+                                    .multilineTextAlignment(.leading)
+                            } else {
+                                Text("Locating...")
+                                    .foregroundColor(.gray)
+                                    .onAppear {
+                                        Task {
+                                            while locationManager.lastKnownLocation == nil {
+                                                try? await Task.sleep(nanoseconds: 500_000_000)
+                                            }
+                                            await locationManager.fetchAddress()
+                                        }
+                                    }
+                            }
+                        }
+                        .padding(.top, 8)
+                        ZStack(alignment: .bottomTrailing) {
                             Map {
                                 if let location = locationManager.lastKnownLocation {
-                                    Marker("Your Location", coordinate: CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude))
+                                    Marker("Your Location", coordinate: location)
                                         .tint(.blue)
                                 }
                             }
@@ -67,15 +71,18 @@ struct newScheduleView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                             .shadow(radius: 5)
 
-                            Button("Refresh", systemImage: "repeat"){
-                                locationManager.requestLocationAuthorization()
+                            Button(action: {
+                                Task {
+                                    locationManager.requestLocationAuthorization()
+                                    await locationManager.fetchAddress()
+                                }
+                            }) {
+                                Image(systemName: "repeat")
                             }
-                            .zIndex(1)
                             .buttonStyle(.glass)
-                            .labelStyle(.iconOnly)
-                            .controlSize(.large)
                             .padding(6)
                         }
+
                     }
                     .onTapGesture {
                         locationSheetOpen = true
@@ -83,10 +90,8 @@ struct newScheduleView: View {
 
                     Image(systemName: "arrow.down")
 
-                    GroupBox(label:
-                                Label("To", systemImage: "mappin.and.ellipse")
-                    ){
-                        VStack(alignment: .leading){
+                    GroupBox(label: Label("To", systemImage: "mappin.and.ellipse")) {
+                        VStack(alignment: .leading) {
                             Text("Route")
                             TextField("138", text: $route)
                                 .textFieldStyle(.roundedBorder)
@@ -97,9 +102,10 @@ struct newScheduleView: View {
                         locationSheetOpen = true
                     }
 
-                    VStack(alignment: .leading){
+                    // Service Picker
+                    VStack(alignment: .leading) {
                         Text("Service")
-                        Picker("Bus Provider", selection: $type){
+                        Picker("Bus Provider", selection: $type) {
                             Text("SLTB").tag("sltb")
                             Text("Private").tag("private")
                         }
@@ -107,9 +113,10 @@ struct newScheduleView: View {
                         .controlSize(.large)
                     }
 
-                    VStack(alignment: .leading){
+                    // Class/Price Picker
+                    VStack(alignment: .leading) {
                         Text("Class/ Pricing \(tier)")
-                        Picker("Bus Class", selection: $tier){
+                        Picker("Bus Class", selection: $tier) {
                             Text("Normal").tag("x1")
                             Text("Semi-Luxury").tag("x1.5")
                             Text("Luxury").tag("x2")
@@ -119,29 +126,21 @@ struct newScheduleView: View {
                         .controlSize(.large)
                     }
 
-                    VStack(alignment: .leading){
+                    // Seating Picker
+                    VStack(alignment: .leading) {
                         Text("Seating \(seating)")
-                        Picker("Seating", selection: $seating){
-                            Label("Available", systemImage: "person")
-                                .tag("Available")
-                                .labelStyle(.iconOnly)
-                            Label("Almost full", systemImage: "person.2")
-                                .tag("Almost full")
-                                .labelStyle(.iconOnly)
-                            Label("Full", systemImage: "person.3")
-                                .tag("Full")
-                                .labelStyle(.iconOnly)
-                                .foregroundStyle(.yellow)
-                            Label("Loaded", systemImage: "person.3.fill")
-                                .tag("Loaded")
-                                .labelStyle(.iconOnly)
-                                .foregroundStyle(.red)
+                        Picker("Seating", selection: $seating) {
+                            Label("Available", systemImage: "person").tag("Available").labelStyle(.iconOnly)
+                            Label("Almost full", systemImage: "person.2").tag("Almost full").labelStyle(.iconOnly)
+                            Label("Full", systemImage: "person.3").tag("Full").labelStyle(.iconOnly).foregroundStyle(.yellow)
+                            Label("Loaded", systemImage: "person.3.fill").tag("Loaded").labelStyle(.iconOnly).foregroundStyle(.red)
                         }
                         .pickerStyle(.palette)
                         .controlSize(.large)
                     }
 
-                    VStack(alignment: .leading){
+                    // License Plate
+                    VStack(alignment: .leading) {
                         Text("License Plate")
                         TextField("NA-6969", text: $plate)
                             .textFieldStyle(.roundedBorder)
@@ -151,34 +150,36 @@ struct newScheduleView: View {
                 }
                 .padding()
             }
-            .toolbar{
-                ToolbarItem(placement: .destructiveAction){
-
-                    Button("Cancel", systemImage: "xmark"){
-
+            .toolbar {
+                ToolbarItem(placement: .destructiveAction) {
+                    Button {
+                    } label: {
+                        Image(systemName: "xmark")
                     }
-                    .labelStyle(.iconOnly)
                 }
 
-                ToolbarItem(placement: .confirmationAction){
-                    Button("Create", systemImage: "checkmark"){
-
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                    } label: {
+                        Image(systemName: "checkmark")
                     }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.borderedProminent)
                 }
             }
+            .onAppear {
+                locationManager.requestLocationAuthorization()
+                locationManager.startUpdatingLocation()
+            }
         }
-        .sheet(isPresented: $locationSheetOpen){
+        .sheet(isPresented: $locationSheetOpen) {
             LocationSearchView(searchText: $fromLocation)
                 .presentationDragIndicator(.visible)
-            //                    .presentationBackground(.ultraThinMaterial)
-                .presentationDetents([.medium,.large])
+                .presentationDetents([.medium, .large])
                 .presentationContentInteraction(.resizes)
         }
     }
 }
 
 #Preview {
-    newScheduleView()
+    NewScheduleView()
 }

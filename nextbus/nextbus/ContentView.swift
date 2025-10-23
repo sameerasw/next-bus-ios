@@ -36,7 +36,7 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $newSheetOpen){
-                newScheduleView()
+                NewScheduleView()
                     .presentationDragIndicator(.visible)
 //                    .presentationBackground(.ultraThinMaterial)
                     .presentationDetents([.large])
